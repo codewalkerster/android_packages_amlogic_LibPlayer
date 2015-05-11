@@ -226,7 +226,6 @@ int player_stop(int pid)
     if (player_para == NULL) {
         return PLAYER_NOT_VALID_PID;
     }
-    set_auto_refresh_rate(auto_refresh_rate_enable);
     sta = get_player_state(player_para);
     log_print("[player_stop]player_status=%x\n", sta);
     if (PLAYER_THREAD_IS_STOPPED(sta)) {
@@ -1817,4 +1816,9 @@ int player_closeCodec(int pid)
     }
     codec_pause(player_para);
     return codec_close(player_para);
+}
+
+int resume_auto_refresh_rate()
+{
+    return set_auto_refresh_rate(auto_refresh_rate_enable);
 }

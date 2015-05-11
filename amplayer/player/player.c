@@ -1526,6 +1526,7 @@ release:
     set_sysfs_int("/sys/class/tsync/vpause_flag",0);
 
 release0:
+    resume_auto_refresh_rate();
     player_mate_release(player);
     log_print("\npid[%d]player_thread release0 begin...(sta:0x%x)\n", player->player_id, get_player_state(player));
 
