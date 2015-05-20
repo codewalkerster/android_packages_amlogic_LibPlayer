@@ -2448,6 +2448,12 @@ int write_av_packet(play_para_t *para)
     int dump_data_mode = 0;
     char dump_path[128];
     signed short audio_idx = para->astream_info.audio_index;
+    int buf_limited_time_ms;
+
+    if (pkt->type == CODEC_AUDIO || pkt->type == CODEC_VIDEO)
+    {
+        buf_limited_time_ms = para->playctrl_info.buf_limited_time_ms;
+    }
 
     if (pkt->avpkt_newflag && pkt->avpkt_isvalid &&
             pkt->type == CODEC_AUDIO && pkt->avpkt->stream_index != audio_idx)
@@ -2606,6 +2612,14 @@ int write_av_packet(play_para_t *para)
     {
         while (size > 0 && pkt->avpkt_isvalid)
         {
+            if (buf_limited_time_ms && (get_av_delay_ms(para) > buf_limited_time_ms) && (get_avbuf_min_size(para) > 0x400))
+            {
+                if (!para->enable_rw_on_pause)
+                {
+                    player_thread_wait(para, RW_WAIT_TIME);
+                }
+                return PLAYER_SUCCESS;
+            }
             //if ape frame write 10k every time
             int nCurrentWriteCount = (size > AUDIO_WRITE_SIZE_PER_TIME) ? AUDIO_WRITE_SIZE_PER_TIME : size;
             write_bytes = codec_write(pkt->codec, (char *)buf, nCurrentWriteCount);
@@ -2742,6 +2756,14 @@ int write_av_packet(play_para_t *para)
     {
         while (size > 0 && pkt->avpkt_isvalid)
         {
+            if (buf_limited_time_ms && (get_av_delay_ms(para) > buf_limited_time_ms) && (get_avbuf_min_size(para) > 0x400))
+            {
+                if (!para->enable_rw_on_pause)
+                {
+                    player_thread_wait(para, RW_WAIT_TIME);
+                }
+                return PLAYER_SUCCESS;
+            }
             if ((pkt->type == CODEC_SUBTITLE) && (!am_getconfig_bool("media.amplayer.sublowmem")))
             {
                 int i;
@@ -4761,6 +4783,74 @@ void set_tsync_enable_codec(play_para_t *p_para, int enable)
 
     return;
 }
+int get_av_delay_ms(play_para_t *p_para)
+{
+    int adelayms= -1,vdelayms= -1,avdelayms=0;
+
+    if (p_para->vstream_info.has_video && get_video_codec(p_para))
+    {
+        codec_get_video_cur_delay_ms(get_video_codec(p_para),&vdelayms);
+        avdelayms = vdelayms;
+    }
+    if (p_para->astream_info.has_audio && get_audio_codec(p_para))
+    {
+        codec_get_audio_cur_delay_ms(get_audio_codec(p_para),&adelayms);
+        avdelayms=MIN(avdelayms,adelayms);
+    }
+
+    return avdelayms;
+}
+
+int get_avbuf_min_size(play_para_t *p_para)
+{
+    struct buf_status vbuf, abuf;
+    codec_para_t    *vcodec = NULL;
+    codec_para_t    *acodec = NULL;
+    int min_size = 0;
+    if ((p_para->stream_type == STREAM_ES)
+        || (p_para->stream_type == STREAM_AUDIO)
+        || (p_para->stream_type == STREAM_VIDEO))
+    {
+        if (p_para->astream_info.has_audio && p_para->acodec)
+        {
+            acodec = p_para->acodec;
+        }
+        if (p_para->vstream_info.has_video && p_para->vcodec)
+        {
+            vcodec = p_para->vcodec;
+        }
+    }
+    else if (p_para->codec)
+    {
+        vcodec = p_para->codec;
+        acodec = p_para->codec;
+    }
+
+    if (vcodec && p_para->vstream_info.has_video)
+    {
+        if (codec_get_vbuf_state(vcodec,&vbuf) != 0)
+        {
+            log_error("codec_get_vbuf_state error!\n");
+        }
+        else
+        {
+            min_size = vbuf.data_len;
+        }
+    }
+    if (acodec && p_para->astream_info.has_audio)
+    {
+        if (codec_get_abuf_state(acodec,&abuf) != 0)
+        {
+            log_error("codec_get_abuf_state error!\n");
+        }
+        else
+        {
+            min_size = MIN(abuf.data_len,min_size);
+        }
+    }
+
+    return min_size;
+}
 
 int check_avbuffer_enough(play_para_t *para)
 {
@@ -4814,6 +4904,11 @@ int check_avbuffer_enough(play_para_t *para)
         log_print("check_avbuffer_enough abuflevel %f, vbuflevel %f, limit %f aenough=%d venought=%d\n",
         para->state.audio_bufferlevel, para->state.video_bufferlevel, high_limit,abuf_enough,vbuf_enough);
     */
+
+    if (para->playctrl_info.buf_limited_time_ms && (para->latest_lowlevel_av_delay_ms > para->playctrl_info.buf_limited_time_ms))
+    {
+        ret = 0;
+    }
     return ret;
 }
 
