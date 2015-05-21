@@ -2448,7 +2448,7 @@ int write_av_packet(play_para_t *para)
     int dump_data_mode = 0;
     char dump_path[128];
     signed short audio_idx = para->astream_info.audio_index;
-    int buf_limited_time_ms;
+    int buf_limited_time_ms = 0;
 
     if (pkt->type == CODEC_AUDIO || pkt->type == CODEC_VIDEO)
     {
