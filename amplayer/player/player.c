@@ -1492,6 +1492,7 @@ write_packet:
                 if (player->playctrl_info.f_step == 0) {
                     // set_black_policy(player->playctrl_info.black_out);
                 }
+                resume_auto_refresh_rate();
             }
 
             if (player->playctrl_info.reset_flag) {

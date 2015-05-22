@@ -96,12 +96,17 @@ int get_black_policy()
 
 int set_auto_refresh_rate(int enable)
 {
-    return set_sysfs_int("/sys/class/tv/policy_fr_auto", enable);
+    return set_sysfs_int("/sys/class/tv/policy_fr_auto_switch", enable);
 }
 
 int get_auto_refresh_rate()
 {
-    return get_sysfs_int("/sys/class/tv/policy_fr_auto");
+    return get_sysfs_int("/sys/class/tv/policy_fr_auto_switch");
+}
+
+int reset_auto_refresh_rate()
+{
+    return set_sysfs_int("/sys/class/tv/policy_fr_auto_switch", 3);
 }
 
 int check_audiodsp_fatal_err()

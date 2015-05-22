@@ -60,6 +60,7 @@ int auto_refresh_rate_enable = 0;
 
 int player_init(void)
 {
+    reset_auto_refresh_rate();
     print_version_info();
     update_loglevel_setting();
     /*register all formats and codecs*/
